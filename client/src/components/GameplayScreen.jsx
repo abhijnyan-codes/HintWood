@@ -107,6 +107,7 @@ function CardCorners() {
 
 function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImage, autoRevealCountdown }) {
   const isImageHint = hint.type === "image" || hint.type === "actor";
+  const isAudioHint = hint.type === "audio"; // NEW: Handle audio hint type
 
   return (
     <div className="relative w-full aspect-[3/4]">
@@ -127,7 +128,8 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImag
           >
             <CardCorners />
             <div className="border border-dashed border-outline-variant/50 rounded-md w-12 h-12 flex items-center justify-center mb-3">
-              <span className="material-symbols-outlined text-primary-container text-xl">
+              {/* FIXED: Added translate-y-[2px] here as well for consistency */}
+              <span className="material-symbols-outlined text-primary-container text-xl translate-y-[2px]">
                 movie
               </span>
             </div>
@@ -183,6 +185,16 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImag
                     </div>
                   )}
                 </div>
+              ) : isAudioHint ? (
+                // NEW: Render the audio player for the Song hint
+                <div className="flex flex-col items-center justify-center gap-2 w-full">
+                  <span className={`text-sm ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
+                    {hint.text}
+                  </span>
+                  {hint.audioUrl && (
+                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-8 w-full max-w-[200px] rounded-full" />
+                  )}
+                </div>
               ) : (
                 <p className="font-body-md text-sm text-on-surface line-clamp-5">{hint.text}</p>
               )}
@@ -198,9 +210,6 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImag
   );
 }
 
-// The 6th hint card (Reference). Same flip-card visuals as the others,
-// but its locked face shows bonus-cost messaging, and its reveal is
-// triggered by onRequestBonus instead of a free tap or a timer.
 function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
   return (
     <div className="relative w-full aspect-[3/4]">
@@ -226,7 +235,8 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
           >
             <CardCorners />
             <div className="border border-dashed border-primary-container/60 rounded-md w-12 h-12 flex items-center justify-center mb-3">
-              <span className="material-symbols-outlined text-primary text-xl">bolt</span>
+              {/* FIXED: Added translate-y-[2px] to center the lightning bolt */}
+              <span className="material-symbols-outlined text-primary text-xl translate-y-[2px]">bolt</span>
             </div>
             <span className="font-caption text-caption text-primary text-center px-1 mb-1">
               Bonus Hint
@@ -257,14 +267,26 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
             <CardCorners />
             <div className="flex items-center justify-center gap-1.5 mb-2">
               <span className="material-symbols-outlined text-primary text-base">
-                {hint?.icon || "compare_arrows"}
+                {hint?.icon || "music_note"}
               </span>
               <span className="font-caption text-[10px] uppercase tracking-widest text-primary text-center">
-                {hint?.label || "Reference"}
+                {hint?.label || "Famous Song"}
               </span>
             </div>
             <div className="flex-grow flex items-center justify-center text-center px-1 overflow-hidden">
-              <p className="font-body-md text-sm text-on-surface line-clamp-5">{hint?.text}</p>
+              {/* Updated to check for audio type in bonus hint too */}
+              {hint?.type === "audio" ? (
+                <div className="flex flex-col items-center justify-center gap-2 w-full">
+                  <span className={`text-sm ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
+                    {hint.text}
+                  </span>
+                  {hint.audioUrl && (
+                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-8 w-full max-w-[200px] rounded-full" />
+                  )}
+                </div>
+              ) : (
+                <p className="font-body-md text-sm text-on-surface line-clamp-5">{hint?.text}</p>
+              )}
             </div>
             <div className="w-full border-t border-primary-container/30 mt-2 pt-1 flex justify-center">
               <span className="text-primary-container text-xs">✦</span>
@@ -289,10 +311,10 @@ function RulesModal({ onClose }) {
       >
         <h2 className="font-display text-2xl text-primary mb-4">Rules &amp; Scoring</h2>
         <ul className="space-y-3 text-sm text-on-surface font-body">
-          <li>🎬 Each round has 6 hints: Industry, Dialogue, Actor, Plot, Movie Scene, and a Reference clue.</li>
+          <li>🎬 Each round has 6 hints: Industry, Core Concept, Actor, Plot, Movie Scene, and Famous Song.</li>
           <li>🖱️ Guessers can reveal the first 3 hints by tapping them, in any order, any time.</li>
           <li>⏱️ Hints 4 and 5 reveal automatically together at the 30-second mark.</li>
-          <li>⚡ The 6th hint (Reference) reveals when tapped, but costs 15 seconds off your guessing time next round.</li>
+          <li>⚡ The 6th hint reveals when tapped, but costs 15 seconds off your guessing time next round.</li>
           <li>🏅 Every 3rd round, the current leader gets that 6th hint for free, no penalty.</li>
           <li>⏳ Each round lasts 60 seconds total.</li>
           <li>🏆 First correct guess wins 100 points.</li>

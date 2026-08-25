@@ -17,7 +17,7 @@ const AUTO_REVEAL_AT_MS = 30000;
 const ROUND_END_DELAY_MS = 5000;
 const BONUS_HINT_PENALTY_SECONDS = 15;
 const STREAK_CHECKPOINT_EVERY = 3;
-const BONUS_HINT_INDEX = 5; // the 6th hint, the "Reference" card
+const BONUS_HINT_INDEX = 5; // the 6th hint, the "Famous Song" card
 
 function broadcastRoomState(io, code) {
   const room = getRoom(code);
@@ -67,6 +67,7 @@ function advanceToNextRound(io, code) {
   broadcastRoomState(io, code);
 }
 
+// UPDATED: Dynamic Scoring added to endRound!
 function endRound(io, code, winnerAnonId) {
   const room = getRoom(code);
   if (!room) return;
@@ -78,10 +79,17 @@ function endRound(io, code, winnerAnonId) {
   if (winnerAnonId) {
     const winner = room.players.find((p) => p.anonId === winnerAnonId);
     if (winner) {
-      winner.score += 100;
+      // SCORING MATH: 100 + (remaining seconds * 2)
+      const elapsedSeconds = Math.floor((Date.now() - room.roundStartedAt) / 1000);
+      const remainingSeconds = Math.max(ROUND_DURATION_SECONDS - elapsedSeconds, 0);
+      const timeBonus = remainingSeconds * 2; // Change this 2 to whatever multiplier you want!
+      const pointsEarned = 100 + timeBonus;
+      
+      winner.score += pointsEarned;
       winnerName = winner.name;
     }
   } else {
+    // If nobody guessed it, Giver gets 60 points
     const giver = room.players[room.giverIndex];
     if (giver) giver.score += 60;
   }
@@ -139,10 +147,6 @@ function registerSocketHandlers(io, socket) {
     broadcastRoomState(io, code);
   });
 
-  // Resets a finished room back into a fresh lobby: same code, same
-  // players, scores and round state cleared. Host-only, same pattern as
-  // game:start. broadcastRoomState puts phase back to "lobby", which
-  // App.jsx's existing phase-routing already knows how to render.
   socket.on("game:playAgain", ({ code, anonId }) => {
     const room = getRoom(code);
     if (!room) return;
@@ -165,7 +169,7 @@ function registerSocketHandlers(io, socket) {
 
     room.movieTitle = film.title;
     room.moviePoster = film.posterPath || null;
-    room.hints = hints; // now 6 hints: 5 regular + 1 Reference bonus hint
+    room.hints = hints; // Supports our 6 new hints!
     room.revealedHints = hints.map(() => false);
     room.roundStartedAt = Date.now();
     room.guesses = [];
@@ -212,9 +216,6 @@ function registerSocketHandlers(io, socket) {
     broadcastRoomState(io, code);
   });
 
-  // The 6th hint (Reference) — reveals ONLY that specific hint, not
-  // "whatever's next." Costs the requester 15s next round unless they
-  // have a free pass.
   socket.on("bonus:request", ({ code, anonId }) => {
     const room = getRoom(code);
     if (!room || room.phase !== "guessing") return;
@@ -225,7 +226,7 @@ function registerSocketHandlers(io, socket) {
     const giver = room.players[room.giverIndex];
     if (giver?.anonId === anonId) return;
 
-    if (room.revealedHints[BONUS_HINT_INDEX]) return; // already revealed
+    if (room.revealedHints[BONUS_HINT_INDEX]) return; 
 
     room.revealedHints[BONUS_HINT_INDEX] = true;
 
@@ -256,8 +257,7 @@ function registerSocketHandlers(io, socket) {
       return;
     }
 
-    const isCorrect =
-      text.trim().toLowerCase() === (room.movieTitle || "").trim().toLowerCase();
+    const isCorrect = text.trim().toLowerCase() === (room.movieTitle || "").trim().toLowerCase();
 
     if (isCorrect) {
       room.guesses.push({ type: "correct", anonId, name: player.name });
