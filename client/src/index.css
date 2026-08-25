@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #14140f;
+  --color-surface: #14140f;
+  --color-surface-container-lowest: #0f0e0a;
+  --color-surface-container-low: #1c1c16;
+  --color-surface-container: #20201a;
+  --color-surface-container-high: #2b2a24;
+  --color-surface-container-highest: #36352f;
+  --color-surface-bright: #3a3933;
+  --color-surface-variant: #36352f;
+
+  --color-on-background: #e6e2d9;
+  --color-on-surface: #e6e2d9;
+  --color-on-surface-variant: #d1c5af;
+
+  --color-primary: #ecc246;
+  --color-primary-container: #c9a227;
+  --color-on-primary: #3d2e00;
+  --color-on-primary-container: #4b3a00;
+
+  --color-secondary: #cbc5c2;
+  --color-secondary-container: #4b4846;
+  --color-on-secondary: #32302e;
+  --color-on-secondary-container: #bdb7b4;
+
+  --color-tertiary: #cbc6c1;
+  --color-tertiary-container: #aaa6a1;
+  --color-on-tertiary-container: #3e3c38;
+
+  --color-outline: #99907b;
+  --color-outline-variant: #4d4635;
+
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+
+  --font-display: "Playfair Display", serif;
+  --font-body: "Montserrat", sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
