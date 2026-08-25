@@ -11,7 +11,11 @@ const registerSocketHandlers = require("./game/socketHandlers");
 const moviesRouter = require("./routes/movies");
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+  })
+);
 app.use(express.json());
 
 // Any request to /api/movies/... gets handled by movies.js
