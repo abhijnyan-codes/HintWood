@@ -76,7 +76,7 @@ function SafeImage({ src, alt, className }) {
   if (!src || failed) {
     return (
       <div className={`${className} flex items-center justify-center bg-surface-container-high text-on-surface-variant text-xs italic`}>
-        image unavailable
+        unavailable
       </div>
     );
   }
@@ -85,10 +85,7 @@ function SafeImage({ src, alt, className }) {
       src={src}
       alt={alt}
       className={className}
-      onError={() => {
-        console.warn("Image failed to load:", src);
-        setFailed(true);
-      }}
+      onError={() => setFailed(true)}
     />
   );
 }
@@ -105,9 +102,9 @@ function CardCorners() {
   );
 }
 
-function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImage, autoRevealCountdown }) {
+function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandHint, autoRevealCountdown }) {
   const isImageHint = hint.type === "image" || hint.type === "actor";
-  const isAudioHint = hint.type === "audio"; // NEW: Handle audio hint type
+  const isAudioHint = hint.type === "audio"; 
 
   return (
     <div className="relative w-full aspect-[3/4]">
@@ -119,36 +116,40 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImag
             transform: isRevealed ? "rotateY(180deg)" : "rotateY(0deg)",
           }}
         >
+          {/* FRONT OF CARD (Unrevealed) */}
           <div
             onClick={clickable ? onClick : undefined}
-            className={`absolute inset-0 border-2 border-outline-variant rounded-md p-3 flex flex-col items-center justify-center ${
+            className={`absolute inset-0 border-2 border-outline-variant rounded-md p-2 md:p-3 flex flex-col items-center justify-center ${
               clickable ? "cursor-pointer hover:border-primary-container" : ""
             }`}
             style={{ backgroundColor: "#181712", backfaceVisibility: "hidden" }}
           >
             <CardCorners />
-            <div className="border border-dashed border-outline-variant/50 rounded-md w-12 h-12 flex items-center justify-center mb-3">
-              {/* FIXED: Added translate-y-[2px] here as well for consistency */}
-              <span className="material-symbols-outlined text-primary-container text-xl translate-y-[2px]">
+            {/* Reduced box size on mobile to prevent overflow, centered properly */}
+            <div className="border border-dashed border-outline-variant/50 rounded-md w-8 h-8 md:w-10 md:h-10 flex items-center justify-center mb-1 shrink-0">
+              <span className="material-symbols-outlined text-primary-container text-base md:text-xl">
                 movie
               </span>
             </div>
-            <span className="font-caption text-caption text-on-surface-variant italic text-center px-1">
+            <span className="font-caption text-caption text-on-surface-variant italic text-center px-1 text-[9px] md:text-xs">
               {clickable
                 ? "Tap to reveal"
                 : isManual
                 ? "Not revealed yet"
                 : `Reveals in ${autoRevealCountdown}s`}
             </span>
-            <div className="w-full border-t border-outline-variant/30 mt-4 pt-2 text-center">
-              <span className="font-display text-[9px] tracking-[0.25em] text-outline uppercase">
+            {/* mt-auto ensures the text always anchors to bottom, saving space above */}
+            <div className="w-full border-t border-outline-variant/30 mt-auto pt-1 md:pt-2 text-center shrink-0">
+              <span className="font-display text-[8px] md:text-[9px] tracking-[0.25em] text-outline uppercase">
                 Hintwood
               </span>
             </div>
           </div>
 
+          {/* BACK OF CARD (Revealed) */}
           <div
-            className="absolute inset-0 border-2 border-primary-container rounded-md p-3 flex flex-col"
+            onClick={() => isRevealed && onExpandHint(hint)}
+            className="absolute inset-0 border-2 border-primary-container rounded-md p-2 md:p-3 flex flex-col cursor-pointer hover:border-primary transition-colors group"
             style={{
               backgroundColor: "#241f0f",
               backfaceVisibility: "hidden",
@@ -157,51 +158,43 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImag
             }}
           >
             <CardCorners />
-            <div className="flex items-center justify-center gap-1.5 mb-2">
-              <span className="material-symbols-outlined text-primary text-base">
+            <div className="flex items-center justify-center gap-1 mb-1 shrink-0">
+              <span className="material-symbols-outlined text-primary text-[14px] md:text-base">
                 {hint.icon || "auto_awesome"}
               </span>
-              <span className="font-caption text-[10px] uppercase tracking-widest text-primary text-center">
+              <span className="font-caption text-[8px] md:text-[10px] uppercase tracking-widest text-primary text-center">
                 {hint.label}
               </span>
             </div>
 
-            <div className="flex-grow flex items-center justify-center text-center px-1 overflow-hidden">
+            <div className="flex-grow flex items-center justify-center text-center px-1 overflow-hidden relative">
               {isImageHint ? (
-                <div
-                  className="relative w-full h-full cursor-zoom-in group"
-                  onClick={() => isRevealed && onExpandImage(hint.imageUrl, hint.label)}
-                >
-                  <SafeImage
-                    src={hint.imageUrl}
-                    alt=""
-                    className="w-full h-full max-h-[140px] object-cover rounded-md border border-outline-variant"
-                  />
-                  {isRevealed && (
-                    <div className="absolute bottom-1 right-1 bg-black/60 rounded-full p-1 group-hover:bg-primary-container/80 transition-colors">
-                      <span className="material-symbols-outlined text-white text-sm block">
-                        zoom_in
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <SafeImage
+                  src={hint.imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover rounded border border-outline-variant"
+                />
               ) : isAudioHint ? (
-                // NEW: Render the audio player for the Song hint
-                <div className="flex flex-col items-center justify-center gap-2 w-full">
-                  <span className={`text-sm ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
+                <div className="flex flex-col items-center justify-center gap-1 w-full">
+                  <span className={`text-[10px] md:text-sm line-clamp-2 md:line-clamp-3 ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
                     {hint.text}
                   </span>
                   {hint.audioUrl && (
-                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-8 w-full max-w-[200px] rounded-full" />
+                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-6 md:h-8 w-full rounded-full" />
                   )}
                 </div>
               ) : (
-                <p className="font-body-md text-sm text-on-surface line-clamp-5">{hint.text}</p>
+                <p className="font-body-md text-[11px] md:text-sm text-on-surface line-clamp-4 md:line-clamp-5">{hint.text}</p>
               )}
             </div>
 
-            <div className="w-full border-t border-primary-container/30 mt-2 pt-1 flex justify-center">
-              <span className="text-primary-container text-xs">✦</span>
+            <div className="w-full border-t border-primary-container/30 mt-1 md:mt-2 pt-1 flex justify-center shrink-0">
+              <span className="text-primary-container text-[10px] md:text-xs">✦</span>
+            </div>
+
+            {/* Magnifying Glass Icon for click-to-expand context */}
+            <div className="absolute bottom-1 right-1 bg-black/60 rounded-full p-0.5 md:p-1 text-white opacity-70 group-hover:opacity-100 transition-opacity">
+              <span className="material-symbols-outlined text-[10px] md:text-sm block">zoom_in</span>
             </div>
           </div>
         </div>
@@ -210,7 +203,7 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandImag
   );
 }
 
-function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
+function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick, onExpandHint }) {
   return (
     <div className="relative w-full aspect-[3/4]">
       <div className="absolute inset-0 [perspective:1200px]">
@@ -221,9 +214,10 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
             transform: isRevealed ? "rotateY(180deg)" : "rotateY(0deg)",
           }}
         >
+          {/* FRONT OF BONUS CARD (Unrevealed) */}
           <div
             onClick={clickable ? onClick : undefined}
-            className={`absolute inset-0 border-2 rounded-md p-3 flex flex-col items-center justify-center ${
+            className={`absolute inset-0 border-2 rounded-md p-2 md:p-3 flex flex-col items-center justify-center ${
               clickable
                 ? "cursor-pointer border-primary-container hover:border-primary"
                 : "border-outline-variant"
@@ -234,29 +228,32 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
             }}
           >
             <CardCorners />
-            <div className="border border-dashed border-primary-container/60 rounded-md w-12 h-12 flex items-center justify-center mb-3">
-              {/* FIXED: Added translate-y-[2px] to center the lightning bolt */}
-              <span className="material-symbols-outlined text-primary text-xl translate-y-[2px]">bolt</span>
+            {/* Reduced box size on mobile to prevent overflow, centered properly */}
+            <div className="border border-dashed border-primary-container/60 rounded-md w-8 h-8 md:w-10 md:h-10 flex items-center justify-center mb-1 shrink-0">
+              <span className="material-symbols-outlined text-primary text-base md:text-xl">bolt</span>
             </div>
-            <span className="font-caption text-caption text-primary text-center px-1 mb-1">
+            <span className="font-caption text-primary text-center px-1 text-[9px] md:text-xs mb-0.5 shrink-0">
               Bonus Hint
             </span>
-            <span className="font-caption text-caption text-on-surface-variant italic text-center px-1 text-[10px]">
+            <span className="font-caption text-on-surface-variant italic text-center px-1 text-[8px] md:text-[10px] leading-tight shrink-0">
               {!clickable
                 ? "Not available"
                 : hasFreePass
                 ? "Free — tap to use"
                 : "Costs 15s next round"}
             </span>
-            <div className="w-full border-t border-outline-variant/30 mt-4 pt-2 text-center">
-              <span className="font-display text-[9px] tracking-[0.25em] text-outline uppercase">
+            {/* mt-auto ensures the text always anchors to bottom, saving space above */}
+            <div className="w-full border-t border-outline-variant/30 mt-auto pt-1 md:pt-2 text-center shrink-0">
+              <span className="font-display text-[8px] md:text-[9px] tracking-[0.25em] text-outline uppercase">
                 Hintwood
               </span>
             </div>
           </div>
 
+          {/* BACK OF BONUS CARD (Revealed) */}
           <div
-            className="absolute inset-0 border-2 border-primary-container rounded-md p-3 flex flex-col"
+            onClick={() => isRevealed && onExpandHint(hint)}
+            className="absolute inset-0 border-2 border-primary-container rounded-md p-2 md:p-3 flex flex-col cursor-pointer hover:border-primary transition-colors group"
             style={{
               backgroundColor: "#241f0f",
               backfaceVisibility: "hidden",
@@ -265,35 +262,93 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick }) {
             }}
           >
             <CardCorners />
-            <div className="flex items-center justify-center gap-1.5 mb-2">
-              <span className="material-symbols-outlined text-primary text-base">
+            <div className="flex items-center justify-center gap-1 mb-1 shrink-0">
+              <span className="material-symbols-outlined text-primary text-[14px] md:text-base">
                 {hint?.icon || "music_note"}
               </span>
-              <span className="font-caption text-[10px] uppercase tracking-widest text-primary text-center">
+              <span className="font-caption text-[8px] md:text-[10px] uppercase tracking-widest text-primary text-center">
                 {hint?.label || "Famous Song"}
               </span>
             </div>
-            <div className="flex-grow flex items-center justify-center text-center px-1 overflow-hidden">
-              {/* Updated to check for audio type in bonus hint too */}
+            <div className="flex-grow flex items-center justify-center text-center px-1 overflow-hidden relative">
               {hint?.type === "audio" ? (
-                <div className="flex flex-col items-center justify-center gap-2 w-full">
-                  <span className={`text-sm ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
+                <div className="flex flex-col items-center justify-center gap-1 w-full">
+                  <span className={`text-[10px] md:text-sm line-clamp-2 md:line-clamp-3 ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
                     {hint.text}
                   </span>
                   {hint.audioUrl && (
-                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-8 w-full max-w-[200px] rounded-full" />
+                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-6 md:h-8 w-full rounded-full" />
                   )}
                 </div>
               ) : (
-                <p className="font-body-md text-sm text-on-surface line-clamp-5">{hint?.text}</p>
+                <p className="font-body-md text-[11px] md:text-sm text-on-surface line-clamp-4 md:line-clamp-5">{hint?.text}</p>
               )}
             </div>
-            <div className="w-full border-t border-primary-container/30 mt-2 pt-1 flex justify-center">
-              <span className="text-primary-container text-xs">✦</span>
+            <div className="w-full border-t border-primary-container/30 mt-1 md:mt-2 pt-1 flex justify-center shrink-0">
+              <span className="text-primary-container text-[10px] md:text-xs">✦</span>
+            </div>
+
+            {/* Magnifying Glass Icon for click-to-expand context */}
+            <div className="absolute bottom-1 right-1 bg-black/60 rounded-full p-0.5 md:p-1 text-white opacity-70 group-hover:opacity-100 transition-opacity">
+              <span className="material-symbols-outlined text-[10px] md:text-sm block">zoom_in</span>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// NEW: Universal Lightbox for fully expanding ANY hint (text, image, or audio)
+function HintLightbox({ hint, onClose }) {
+  if (!hint) return null;
+  const isImage = hint.type === "image" || hint.type === "actor";
+  const isAudio = hint.type === "audio";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 px-5 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-sm md:max-w-md rounded-lg border border-primary-container p-6 md:p-8 relative flex flex-col items-center text-center shadow-2xl"
+        style={{ backgroundColor: "#1c1c16" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button 
+          onClick={onClose} 
+          className="absolute top-3 right-3 text-on-surface-variant hover:text-error transition-colors"
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
+
+        <div className="flex items-center gap-2 mb-4 md:mb-6 text-primary">
+          <span className="material-symbols-outlined text-xl">{hint.icon || "auto_awesome"}</span>
+          <span className="font-caption uppercase tracking-widest text-sm md:text-base">{hint.label}</span>
+        </div>
+
+        {isImage && (
+          <img 
+            src={hint.imageUrl} 
+            alt={hint.label} 
+            className="w-full rounded-md border border-outline-variant object-contain max-h-[50vh]" 
+          />
+        )}
+
+        {isAudio && (
+          <div className="flex flex-col items-center gap-5 w-full">
+            <p className="font-body-lg text-lg md:text-xl text-on-surface">{hint.text}</p>
+            {hint.audioUrl && (
+              <audio controls src={hint.audioUrl} className="w-full" />
+            )}
+          </div>
+        )}
+
+        {!isImage && !isAudio && (
+          <p className="font-body-lg text-lg md:text-xl text-on-surface leading-relaxed whitespace-pre-wrap">{hint.text}</p>
+        )}
+      </div>
+      <p className="text-on-surface-variant text-sm mt-5 italic tracking-wide">tap anywhere to close</p>
     </div>
   );
 }
@@ -317,7 +372,7 @@ function RulesModal({ onClose }) {
           <li>⚡ The 6th hint reveals when tapped, but costs 15 seconds off your guessing time next round.</li>
           <li>🏅 Every 3rd round, the current leader gets that 6th hint for free, no penalty.</li>
           <li>⏳ Each round lasts 60 seconds total.</li>
-          <li>🏆 First correct guess wins 100 points.</li>
+          <li>🏆 Fast guesses earn more! Base 100 points + bonus for remaining time.</li>
           <li>🎭 If nobody guesses in time, the giver earns 60 points instead.</li>
           <li>🔤 A few random letters reveal once 2 hints are shown — longer titles reveal more.</li>
         </ul>
@@ -328,23 +383,6 @@ function RulesModal({ onClose }) {
           Close
         </button>
       </div>
-    </div>
-  );
-}
-
-function ImageLightbox({ src, label, onClose }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/85 px-5"
-      onClick={onClose}
-    >
-      <img
-        src={src}
-        alt={label}
-        className="max-w-full max-h-[75vh] rounded-md border border-primary-container object-contain"
-        onClick={(e) => e.stopPropagation()}
-      />
-      <p className="text-on-surface-variant text-sm mt-4 italic">{label} — tap anywhere to close</p>
     </div>
   );
 }
@@ -368,7 +406,7 @@ export default function GameplayScreen({
   const [secondsLeft, setSecondsLeft] = useState(ROUND_DURATION_SECONDS);
   const [guessText, setGuessText] = useState("");
   const [showRules, setShowRules] = useState(false);
-  const [expandedImage, setExpandedImage] = useState(null);
+  const [expandedHint, setExpandedHint] = useState(null); // Tracks the full hint object to display
 
   useEffect(() => {
     function computeRemaining() {
@@ -384,11 +422,6 @@ export default function GameplayScreen({
     if (!guessText.trim()) return;
     onSubmitGuess(guessText.trim());
     setGuessText("");
-  }
-
-  function handleExpandImage(src, label) {
-    if (!src) return;
-    setExpandedImage({ src, label });
   }
 
   const mainHints = hints.slice(0, 5);
@@ -407,11 +440,12 @@ export default function GameplayScreen({
   return (
     <div className="min-h-screen bg-background text-on-surface font-body">
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
-      {expandedImage && (
-        <ImageLightbox
-          src={expandedImage.src}
-          label={expandedImage.label}
-          onClose={() => setExpandedImage(null)}
+      
+      {/* Universal Lightbox renders if expandedHint is set */}
+      {expandedHint && (
+        <HintLightbox
+          hint={expandedHint}
+          onClose={() => setExpandedHint(null)}
         />
       )}
 
@@ -471,7 +505,7 @@ export default function GameplayScreen({
             </>
           )}
 
-          <div className="grid grid-cols-3 gap-3 md:gap-4 mt-4 w-full">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 mt-2 md:mt-4 w-full">
             {mainHints.map((hint, i) => {
               const isManual = i < 3;
               const isRevealed = revealedHints[i];
@@ -484,7 +518,7 @@ export default function GameplayScreen({
                   isManual={isManual}
                   clickable={clickable}
                   onClick={() => onRevealHint(i)}
-                  onExpandImage={handleExpandImage}
+                  onExpandHint={(h) => setExpandedHint(h)}
                   autoRevealCountdown={autoRevealCountdown}
                 />
               );
@@ -496,6 +530,7 @@ export default function GameplayScreen({
               clickable={bonusClickable}
               hasFreePass={!!myPlayer?.freeBonusAvailable}
               onClick={onRequestBonus}
+              onExpandHint={(h) => setExpandedHint(h)}
             />
           </div>
         </div>
