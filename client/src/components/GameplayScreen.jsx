@@ -102,7 +102,7 @@ function CardCorners() {
   );
 }
 
-function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandHint, autoRevealCountdown }) {
+function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandHint, autoRevealCountdown, role }) {
   const isImageHint = hint.type === "image" || hint.type === "actor";
   const isAudioHint = hint.type === "audio"; 
 
@@ -176,11 +176,17 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandHint
                 />
               ) : isAudioHint ? (
                 <div className="flex flex-col items-center justify-center gap-1 w-full">
-                  <span className={`text-[10px] md:text-sm line-clamp-2 md:line-clamp-3 ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
-                    {hint.text}
-                  </span>
-                  {hint.audioUrl && (
-                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-6 md:h-8 w-full rounded-full" />
+                  {hint.audioUrl ? (
+                    <>
+                      <span className="text-[10px] md:text-sm text-on-surface-variant italic leading-tight px-1 line-clamp-2 md:line-clamp-3">
+                        {role === "giver" ? hint.text : "Listen to the audio clue..."}
+                      </span>
+                      <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-6 md:h-8 w-full rounded-full" />
+                    </>
+                  ) : (
+                    <span className="text-[10px] md:text-sm line-clamp-2 md:line-clamp-3 text-on-surface-variant italic">
+                      {hint.text}
+                    </span>
                   )}
                 </div>
               ) : (
@@ -203,7 +209,7 @@ function HintCard({ hint, isRevealed, isManual, clickable, onClick, onExpandHint
   );
 }
 
-function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick, onExpandHint }) {
+function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick, onExpandHint, role }) {
   return (
     <div className="relative w-full aspect-[3/4]">
       <div className="absolute inset-0 [perspective:1200px]">
@@ -230,7 +236,7 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick, onEx
             <CardCorners />
             {/* Reduced box size on mobile to prevent overflow, centered properly */}
             <div className="border border-dashed border-primary-container/60 rounded-md w-8 h-8 md:w-10 md:h-10 flex items-center justify-center mb-1 shrink-0">
-              <span className="material-symbols-outlined text-primary text-base md:text-xl">bolt</span>
+              <span className="material-symbols-outlined text-primary text-base md:text-xl translate-y-[2px]">bolt</span>
             </div>
             <span className="font-caption text-primary text-center px-1 text-[9px] md:text-xs mb-0.5 shrink-0">
               Bonus Hint
@@ -273,11 +279,17 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick, onEx
             <div className="flex-grow flex items-center justify-center text-center px-1 overflow-hidden relative">
               {hint?.type === "audio" ? (
                 <div className="flex flex-col items-center justify-center gap-1 w-full">
-                  <span className={`text-[10px] md:text-sm line-clamp-2 md:line-clamp-3 ${!hint.audioUrl ? "text-on-surface-variant italic" : "text-on-surface"}`}>
-                    {hint.text}
-                  </span>
-                  {hint.audioUrl && (
-                    <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-6 md:h-8 w-full rounded-full" />
+                  {hint.audioUrl ? (
+                    <>
+                      <span className="text-[10px] md:text-sm text-on-surface-variant italic leading-tight px-1 line-clamp-2 md:line-clamp-3">
+                        {role === "giver" ? hint.text : "Listen to the audio clue..."}
+                      </span>
+                      <audio controls src={hint.audioUrl} controlsList="nodownload" className="h-6 md:h-8 w-full rounded-full" />
+                    </>
+                  ) : (
+                    <span className="text-[10px] md:text-sm line-clamp-2 md:line-clamp-3 text-on-surface-variant italic">
+                      {hint.text}
+                    </span>
                   )}
                 </div>
               ) : (
@@ -300,7 +312,7 @@ function BonusHintCard({ hint, isRevealed, clickable, hasFreePass, onClick, onEx
 }
 
 // NEW: Universal Lightbox for fully expanding ANY hint (text, image, or audio)
-function HintLightbox({ hint, onClose }) {
+function HintLightbox({ hint, onClose, role }) {
   if (!hint) return null;
   const isImage = hint.type === "image" || hint.type === "actor";
   const isAudio = hint.type === "audio";
@@ -337,9 +349,15 @@ function HintLightbox({ hint, onClose }) {
 
         {isAudio && (
           <div className="flex flex-col items-center gap-5 w-full">
-            <p className="font-body-lg text-lg md:text-xl text-on-surface">{hint.text}</p>
-            {hint.audioUrl && (
-              <audio controls src={hint.audioUrl} className="w-full" />
+            {hint.audioUrl ? (
+              <>
+                <p className="font-body-lg text-lg md:text-xl text-on-surface italic px-2">
+                  {role === "giver" ? hint.text : "Listen to the audio clue"}
+                </p>
+                <audio controls src={hint.audioUrl} className="w-full" />
+              </>
+            ) : (
+              <p className="font-body-lg text-lg md:text-xl text-on-surface">{hint.text}</p>
             )}
           </div>
         )}
@@ -446,6 +464,7 @@ export default function GameplayScreen({
         <HintLightbox
           hint={expandedHint}
           onClose={() => setExpandedHint(null)}
+          role={role}
         />
       )}
 
@@ -520,6 +539,7 @@ export default function GameplayScreen({
                   onClick={() => onRevealHint(i)}
                   onExpandHint={(h) => setExpandedHint(h)}
                   autoRevealCountdown={autoRevealCountdown}
+                  role={role}
                 />
               );
             })}
@@ -531,6 +551,7 @@ export default function GameplayScreen({
               hasFreePass={!!myPlayer?.freeBonusAvailable}
               onClick={onRequestBonus}
               onExpandHint={(h) => setExpandedHint(h)}
+              role={role}
             />
           </div>
         </div>

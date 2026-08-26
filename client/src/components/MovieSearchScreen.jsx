@@ -31,7 +31,8 @@ export default function MovieSearchScreen({ onStartRound }) {
     Object.fromEntries(
       HINT_DEFS.map((h) => [
         h.id,
-        { mode: "auto", manualText: "", manualPerson: null, manualImage: null },
+        // Added manualSong to track the iTunes selection
+        { mode: "auto", manualText: "", manualPerson: null, manualImage: null, manualSong: null },
       ])
     )
   );
@@ -125,12 +126,17 @@ export default function MovieSearchScreen({ onStartRound }) {
     setHintState((prev) => ({ ...prev, [id]: { ...prev[id], manualImage: url } }));
   }
 
+  // New setter for iTunes manual search
+  function setHintManualSong(id, song) {
+    setHintState((prev) => ({ ...prev, [id]: { ...prev[id], manualSong: song } }));
+  }
+
   function handleStartRound() {
     const concept = autoData?.conceptCandidates?.[conceptIndex];
     const actor = autoData?.castCandidates?.[actorIndex];
     const scene = autoData?.backdropCandidates?.[sceneIndex];
     const plot = autoData?.plotCandidates?.[plotIndex];
-    const song = autoData?.songCandidates?.[songIndex]; // This is now an object!
+    const song = autoData?.songCandidates?.[songIndex];
 
     const hints = HINT_DEFS.map((def) => {
       const state = hintState[def.id];
@@ -149,6 +155,19 @@ export default function MovieSearchScreen({ onStartRound }) {
         return { id: def.id, label: def.label, type: "image", imageUrl: scene };
       }
 
+      if (def.id === "song") {
+        if (state.mode === "manual") {
+          return { 
+            id: def.id, 
+            label: def.label, 
+            type: "audio", 
+            text: state.manualSong?.name ? `Features the track: "${state.manualSong.name} - ${state.manualSong.artist}"` : "Audio Clue", 
+            audioUrl: state.manualSong?.previewUrl 
+          };
+        }
+        return { id: def.id, label: def.label, type: "audio", text: song?.name, audioUrl: song?.previewUrl };
+      }
+
       if (state.mode === "manual") {
         return { id: def.id, label: def.label, type: "text", text: state.manualText };
       }
@@ -160,9 +179,6 @@ export default function MovieSearchScreen({ onStartRound }) {
           return { id: def.id, label: def.label, type: "text", text: concept };
         case "plot":
           return { id: def.id, label: def.label, type: "text", text: plot };
-        case "song":
-          // Include BOTH the name and the audio URL so the guessers can play it!
-          return { id: def.id, label: def.label, type: "audio", text: song?.name, audioUrl: song?.previewUrl };
         default:
           return null;
       }
@@ -291,6 +307,7 @@ export default function MovieSearchScreen({ onStartRound }) {
                     onManualTextChange={(text) => setHintManualText(def.id, text)}
                     onManualPersonSelect={(person) => setHintManualPerson(def.id, person)}
                     onManualImageSelect={(url) => setHintManualImage(def.id, url)}
+                    onManualSongSelect={(song) => setHintManualSong(def.id, song)}
                     autoData={autoData}
                     conceptIndex={conceptIndex}
                     onRegenerateConcept={() => setConceptIndex((i) => (i + 1) % (autoData?.conceptCandidates?.length || 1))}
@@ -331,6 +348,7 @@ function HintSlot({
   onManualTextChange,
   onManualPersonSelect,
   onManualImageSelect,
+  onManualSongSelect,
   autoData,
   conceptIndex,
   onRegenerateConcept,
@@ -352,12 +370,16 @@ function HintSlot({
   const actor = autoData?.castCandidates?.[actorIndex];
   const scene = autoData?.backdropCandidates?.[sceneIndex];
   const plot = autoData?.plotCandidates?.[plotIndex];
-  const song = autoData?.songCandidates?.[songIndex]; // Will be an object containing 'name' and 'previewUrl'
+  const song = autoData?.songCandidates?.[songIndex];
 
   const [imageQuery, setImageQuery] = useState("");
   const [imageResults, setImageResults] = useState([]);
   const [isSearchingImage, setIsSearchingImage] = useState(false);
   const [hasSearchedImage, setHasSearchedImage] = useState(false);
+
+  const [songQuery, setSongQuery] = useState("");
+  const [songResults, setSongResults] = useState([]);
+  const [isSearchingSong, setIsSearchingSong] = useState(false);
 
   const handleImageSearch = async () => {
     if (imageQuery.trim().length < 2) return;
@@ -371,6 +393,20 @@ function HintSlot({
       console.error("Image search failed:", err);
     } finally {
       setIsSearchingImage(false);
+    }
+  };
+
+  const handleSongSearch = async () => {
+    if (songQuery.trim().length < 2) return;
+    setIsSearchingSong(true);
+    try {
+      const res = await fetch(`${SERVER_URL}/api/movies/songs/search?q=${encodeURIComponent(songQuery)}`);
+      const data = await res.json();
+      setSongResults(data.results || []);
+    } catch (err) {
+      console.error("Song search failed:", err);
+    } finally {
+      setIsSearchingSong(false);
     }
   };
 
@@ -405,7 +441,6 @@ function HintSlot({
               <span className={!song?.previewUrl ? "text-on-surface-variant italic" : ""}>
                 {song?.name}
               </span>
-              {/* This renders the actual playable audio player if iTunes gave us one! */}
               {song?.previewUrl && (
                 <audio controls src={song.previewUrl} controlsList="nodownload" className="h-10 w-full max-w-[260px] rounded-full" />
               )}
@@ -553,6 +588,60 @@ function HintSlot({
                       }}
                       className="w-24 h-16 object-cover rounded-sm cursor-pointer hover:border-2 hover:border-primary shrink-0 transition-all" 
                     />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : def.id === "song" ? (
+        <div>
+          {state.manualSong ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                {state.manualSong.artworkUrl && <img src={state.manualSong.artworkUrl} className="w-10 h-10 rounded-md object-cover" alt="art" />}
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{state.manualSong.name}</span>
+                  <span className="text-xs text-on-surface-variant">{state.manualSong.artist}</span>
+                </div>
+              </div>
+              {state.manualSong.previewUrl && (
+                <audio controls src={state.manualSong.previewUrl} className="h-10 w-full max-w-[260px] rounded-full" />
+              )}
+              <button onClick={() => onManualSongSelect(null)} className="text-error text-sm underline self-start">Change Song</button>
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={songQuery}
+                  onChange={(e) => setSongQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSongSearch()}
+                  placeholder="Search for any song or artist..."
+                  className="w-full bg-transparent border border-outline-variant rounded-md px-3 py-2 text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-primary"
+                />
+                <button 
+                  onClick={handleSongSearch}
+                  disabled={isSearchingSong}
+                  className="px-5 py-2 bg-primary text-on-primary hover:bg-primary-container transition-colors rounded-md font-label-md uppercase tracking-wider text-sm shrink-0 disabled:opacity-50"
+                >
+                  Search
+                </button>
+              </div>
+
+              {isSearchingSong && <p className="text-xs text-primary mt-2 absolute right-0">Searching iTunes...</p>}
+              
+              {songResults.length > 0 && !isSearchingSong && (
+                <div className="absolute top-full left-0 right-0 mt-2 border border-outline-variant rounded-md overflow-hidden z-30 max-h-60 overflow-y-auto shadow-2xl" style={{ backgroundColor: "#14140f" }}>
+                  {songResults.map((song) => (
+                    <div key={song.id} onClick={() => { onManualSongSelect(song); setSongQuery(""); setSongResults([]); }} className="flex items-center gap-3 px-3 py-2 hover:bg-surface-container-high cursor-pointer border-b border-outline-variant/30 last:border-0">
+                      {song.artworkUrl && <img src={song.artworkUrl} alt="" className="w-10 h-10 rounded-md object-cover" />}
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-sm truncate text-on-surface">{song.name}</span>
+                        <span className="text-xs text-on-surface-variant truncate">{song.artist}</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
